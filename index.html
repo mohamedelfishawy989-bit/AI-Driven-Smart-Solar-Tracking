@@ -1,0 +1,156 @@
+<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+<style>
+:root{--bg:#111317;--panel:#1a1d22;--panel2:#20252c;--line:#313842;--text:#f4f7fb;--muted:#9aa7b6;--good:#42d392;--bad:#ff5c72;--warn:#f5c542;--info:#4cc9f0;--soft:#15181d}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;margin:0;padding:18px}
+.shell{max-width:1180px;margin:0 auto}
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:16px}
+h1{font-size:28px;line-height:1.1;margin:0}
+.sub{color:var(--muted);font-size:13px;margin-top:5px}
+.statusline{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.badge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 10px;font-size:12px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.good .dot{background:var(--good)}.bad .dot{background:var(--bad)}.warn .dot{background:var(--warn)}
+.layout{display:grid;grid-template-columns:1.45fr .85fr;gap:12px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;min-width:0}
+.wide{grid-column:span 2}.full{grid-column:1/-1}
+.kicker{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.value{font-size:28px;font-weight:800;line-height:1.1;white-space:nowrap}.unit{font-size:13px;color:var(--muted);font-weight:700;margin-left:4px}
+.small{font-size:12px;color:var(--muted);margin-top:6px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.row:last-child{border-bottom:0}
+.label{color:var(--muted);font-size:13px}.num{font-weight:800}
+.pill{display:inline-flex;align-items:center;justify-content:center;min-width:58px;border-radius:999px;padding:5px 9px;font-size:12px;font-weight:800;border:1px solid var(--line);background:var(--soft);color:var(--muted)}
+.pill.on{color:#07130d;background:var(--good);border-color:var(--good)}.pill.off{color:#20070b;background:var(--bad);border-color:var(--bad)}.pill.warn{color:#1f1701;background:var(--warn);border-color:var(--warn)}
+.actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+button{height:42px;border:0;border-radius:8px;cursor:pointer;font-weight:800;color:#081016;background:var(--info)}
+button.secondary{background:#2a3038;color:var(--text);border:1px solid var(--line)}button.danger{background:var(--bad);color:#26080d}
+button:active{transform:translateY(1px)}
+.bar{height:9px;background:#111419;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-top:9px}
+.fill{height:100%;width:0;background:var(--good);transition:width .25s ease}
+.fill.warn{background:var(--warn)}.fill.bad{background:var(--bad)}.fill.info{background:var(--info)}
+.servo{height:18px;background:#111419;border:1px solid var(--line);border-radius:999px;position:relative;margin:12px 0 6px;overflow:hidden}
+.servo:before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:#59616d}.servo span{position:absolute;top:2px;bottom:2px;width:14px;background:var(--info);border-radius:999px;transition:.2s}
+.quad{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.cell{min-height:74px;border:1px solid var(--line);background:rgba(76,201,240,.12);border-radius:8px;padding:10px;display:flex;flex-direction:column;justify-content:space-between}.cell strong{font-size:18px}.cell span{font-size:12px;color:var(--muted)}
+canvas{width:100%;height:210px;display:block;background:#111419;border:1px solid var(--line);border-radius:8px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-top:9px}.key{display:flex;align-items:center;gap:6px}.sw{width:18px;height:3px;border-radius:999px;background:var(--info)}.sw.power{background:var(--good)}.sw.temp{background:var(--warn)}
+.insight{font-size:15px;line-height:1.4}.muted{color:var(--muted)}
+@media(max-width:920px){.layout{grid-template-columns:1fr}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.topbar{align-items:flex-start;flex-direction:column}.statusline{justify-content:flex-start}}
+@media(max-width:560px){body{padding:12px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.actions{grid-template-columns:1fr}h1{font-size:23px}.value{font-size:24px}}
+</style>
+</head><body>
+<div class="shell">
+<div class="topbar">
+<div><h1>Solar Tracker</h1><div class="sub">ESP32 live control panel - MG996R 180 deg</div></div>
+<div class="statusline">
+<span class="badge" id="conn"><span class="dot"></span><span id="connText">Connecting</span></span>
+<span class="badge"><span class="dot"></span><span id="uptime">0s</span></span>
+<span class="badge"><span class="dot"></span><span id="wifi">RSSI --</span></span>
+<span class="badge"><span class="dot"></span><span id="heap">Heap -- KB</span></span>
+</div>
+</div>
+<div class="layout">
+<main class="grid">
+<section class="card"><div class="kicker">Power</div><div class="value"><span id="p">0.000</span><span class="unit">W</span></div><div class="small">Expected <span id="expected">0.00</span> W</div><div class="bar"><div class="fill power" id="powerFill"></div></div></section>
+<section class="card"><div class="kicker">Light</div><div class="value"><span id="lux">0.0</span><span class="unit">lux</span></div><div class="small" id="lightState">Waiting</div><div class="bar"><div class="fill info" id="luxFill"></div></div></section>
+<section class="card"><div class="kicker">Temperature</div><div class="value"><span id="t">0.00</span><span class="unit">C</span></div><div class="small">Limit 40 C</div><div class="bar"><div class="fill warn" id="tempFill"></div></div></section>
+<section class="card"><div class="kicker">Health</div><div class="value"><span id="ai">0.0</span><span class="unit">%</span></div><div class="small" id="healthText">Analyzing</div><div class="bar"><div class="fill" id="healthFill"></div></div></section>
+<section class="card wide">
+<div class="kicker">Live Trend</div>
+<canvas id="chart" width="680" height="230"></canvas>
+<div class="legend"><span class="key"><span class="sw power"></span>Power</span><span class="key"><span class="sw"></span>Lux</span><span class="key"><span class="sw temp"></span>Temp</span></div>
+</section>
+<section class="card wide">
+<div class="kicker">LDR Balance</div>
+<div class="quad">
+<div class="cell" id="qtl"><span>Top Left</span><strong id="tl">0</strong></div>
+<div class="cell" id="qtr"><span>Top Right</span><strong id="tr">0</strong></div>
+<div class="cell" id="qbl"><span>Bottom Left</span><strong id="bl">0</strong></div>
+<div class="cell" id="qbr"><span>Bottom Right</span><strong id="br">0</strong></div>
+</div>
+</section>
+<section class="card wide">
+<div class="kicker">Servo 180</div>
+<div class="row"><span class="label">Horizontal angle</span><span class="num"><span id="sha">90</span> deg / step <span id="sh">0</span></span></div>
+<div class="servo"><span id="barH"></span></div>
+<div class="row"><span class="label">Vertical angle</span><span class="num"><span id="sva">90</span> deg / step <span id="sv">0</span></span></div>
+<div class="servo"><span id="barV"></span></div>
+<div class="row"><span class="label">H error</span><span class="num" id="eh">0</span></div>
+<div class="row"><span class="label">V error</span><span class="num" id="ev">0</span></div>
+</section>
+<section class="card wide">
+<div class="kicker">Electrical</div>
+<div class="row"><span class="label">Voltage</span><span class="num"><span id="v">0.00</span> V</span></div>
+<div class="row"><span class="label">Current</span><span class="num"><span id="i">0.000</span> A</span></div>
+<div class="row"><span class="label">Efficiency</span><span class="num"><span id="eff">0.0</span>%</span></div>
+</section>
+</main>
+<aside>
+<section class="card">
+<div class="kicker">System State</div>
+<div class="row"><span class="label">Pump</span><span class="pill" id="pump">OFF</span></div>
+<div class="row"><span class="label">Auto clean</span><span class="pill" id="auto">OFF</span></div>
+<div class="row"><span class="label">Tracking</span><span class="pill" id="tracking">OFF</span></div>
+<div class="row"><span class="label">Night mode</span><span class="pill" id="night">NO</span></div>
+<div class="row"><span class="label">Cloud</span><span class="pill" id="cloud">CLEAR</span></div>
+<div class="row"><span class="label">Pump timer</span><span class="num" id="pumpTimer">0s</span></div>
+<div class="actions">
+<button onclick="cmd('/toggle')">Pump</button>
+<button class="secondary" onclick="cmd('/toggleAuto')">Auto</button>
+<button class="danger" onclick="cmd('/toggleTracking')">Tracking</button>
+</div>
+</section>
+<section class="card" style="margin-top:12px">
+<div class="kicker">Insight</div>
+<div class="insight" id="insight">Waiting for sensor data.</div>
+</section>
+</aside>
+</div>
+</div>
+<script>
+const $=id=>document.getElementById(id),hist={p:[],lux:[],t:[]},MAX=90;
+function txt(id,v){$(id).textContent=v}
+function pct(v,max){return Math.max(0,Math.min(100,(v/max)*100))}
+function fmtTime(s){s=Math.max(0,Math.floor(s));let h=Math.floor(s/3600),m=Math.floor((s%3600)/60),r=s%60;return h?h+"h "+m+"m":m?m+"m "+r+"s":r+"s"}
+function setPill(id,on,labelOn,labelOff,warn){let e=$(id);e.textContent=on?labelOn:labelOff;e.className="pill "+(warn?"warn":on?"on":"off")}
+function setFill(id,v,max,mode){let e=$(id);e.style.width=pct(v,max)+"%";e.className="fill "+(mode||"")}
+function servoAngleBar(id,angle){let e=$(id),p=Math.max(0,Math.min(100,(angle/180)*100));e.style.left="calc("+p+"% - 7px)"}
+function ldrCell(id,val,max){let o=.10+.32*(max?val/max:0);$(id).style.background="rgba(76,201,240,"+o.toFixed(2)+")"}
+function push(a,v){a.push(v);if(a.length>MAX)a.shift()}
+function draw(){
+let c=$("chart"),x=c.getContext("2d"),w=c.width,h=c.height,pad=28;
+x.clearRect(0,0,w,h);x.fillStyle="#111419";x.fillRect(0,0,w,h);x.strokeStyle="#27303a";x.lineWidth=1;
+for(let i=1;i<4;i++){let y=pad+i*(h-pad*2)/4;x.beginPath();x.moveTo(pad,y);x.lineTo(w-pad,y);x.stroke()}
+line(hist.p,"#42d392",18);line(hist.lux,"#4cc9f0",12000);line(hist.t,"#f5c542",70);
+function line(arr,col,max){if(arr.length<2)return;x.strokeStyle=col;x.lineWidth=2;x.beginPath();arr.forEach((v,i)=>{let xx=pad+i*(w-pad*2)/(MAX-1),yy=h-pad-Math.max(0,Math.min(1,v/max))*(h-pad*2);i?x.lineTo(xx,yy):x.moveTo(xx,yy)});x.stroke()}
+}
+async function cmd(url){try{await fetch(url);await update()}catch(e){}}
+function insight(d){
+if(!d.tracking)return "Tracking is stopped. The servos hold their last angle.";
+if(d.night)return "Night mode is active. The servos are parking to the home angle.";
+if(d.cloud)return "Cloud drop detected. Cleaning logic is waiting for stable sunlight.";
+if(Math.abs(d.eh)<180&&Math.abs(d.ev)<180)return "Panel is balanced on the light source.";
+if(d.ai<.6&&d.lux>5000)return "Power is low for current light. Panel may need cleaning.";
+return "System is tracking with 180-degree position control.";
+}
+async function update(){
+try{
+let d=await fetch('/data',{cache:'no-store'}).then(r=>r.json());
+$("conn").className="badge good";txt("connText","Online");txt("uptime",fmtTime(d.uptime));txt("wifi","RSSI "+d.rssi+" dBm");
+txt("p",d.p.toFixed(3));txt("expected",d.expected.toFixed(2));txt("lux",d.lux.toFixed(1));txt("t",d.t.toFixed(2));txt("ai",(d.ai*100).toFixed(1));
+txt("v",d.v.toFixed(2));txt("i",d.i.toFixed(3));txt("eff",d.eff.toFixed(1));txt("heap","Heap "+(d.heap/1024).toFixed(1)+" KB");txt("eh",d.eh.toFixed(0));txt("ev",d.ev.toFixed(0));txt("sha",d.sha);txt("sva",d.sva);txt("sh",d.sh);txt("sv",d.sv);
+txt("tl",d.tl);txt("tr",d.tr);txt("bl",d.bl);txt("br",d.br);txt("pumpTimer",fmtTime(d.pumpRemaining));
+setPill("pump",d.pump,"ON","OFF");setPill("auto",d.auto,"ON","OFF");setPill("tracking",d.tracking,"ON","OFF");setPill("night",d.night,"YES","NO",d.night);setPill("cloud",d.cloud,"YES","CLEAR",d.cloud);
+setFill("powerFill",d.p,18,"power");setFill("luxFill",d.lux,12000,"info");setFill("tempFill",d.t,70,d.t>40?"bad":"warn");setFill("healthFill",d.ai,1,d.ai<.6?"bad":d.ai<.8?"warn":"");
+txt("lightState",d.night?"Night":d.cloud?"Cloudy":"Clear");txt("healthText",d.ai<.6?"Low":d.ai<.8?"Watch":"Good");txt("insight",insight(d));
+servoAngleBar("barH",d.sha);servoAngleBar("barV",d.sva);let m=Math.max(1,d.tl,d.tr,d.bl,d.br);ldrCell("qtl",d.tl,m);ldrCell("qtr",d.tr,m);ldrCell("qbl",d.bl,m);ldrCell("qbr",d.br,m);
+push(hist.p,d.p);push(hist.lux,d.lux);push(hist.t,d.t);draw();
+}catch(e){$("conn").className="badge bad";txt("connText","Offline")}
+}
+setInterval(update,1000);update();
+</script>
+</body></html>
+)rawliteral";
